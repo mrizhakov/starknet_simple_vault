@@ -15,11 +15,13 @@ pub mod SimpleVault {
         token: ERC20ABIDispatcher,
         total_supply: u256,
         balance_of: Map<ContractAddress, u256>,
+        minimum_deposit: u256,  // New storage variable
     }
 
     #[constructor]
     fn constructor(ref self: ContractState, token: ContractAddress) {
         self.token.write(ERC20ABIDispatcher { contract_address: token });
+        self.minimum_deposit.write(10000000000000000); // 0.01 STRK (18 decimals)
     }
 
     #[generate_trait]
@@ -57,6 +59,10 @@ pub mod SimpleVault {
             let caller = get_caller_address();
             let this = get_contract_address();
 
+            // Check minimum deposit
+            let current_min = self.minimum_deposit.read();
+            assert(amount >= current_min, 'Deposit below minimum');
+
             let mut shares = 0;
             if self.total_supply.read() == 0 {
                 shares = amount;
@@ -65,8 +71,10 @@ pub mod SimpleVault {
                 shares = (amount * self.total_supply.read()) / balance;
             }
 
-            PrivateFunctions::_mint(ref self, caller, shares);
+            // Increase minimum deposit by 10%
+            self.minimum_deposit.write(current_min + (current_min / 10));
 
+            PrivateFunctions::_mint(ref self, caller, shares);
             self.token.read().transfer_from(caller, this, amount);
         }
 

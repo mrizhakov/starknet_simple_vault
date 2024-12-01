@@ -38,19 +38,19 @@ fn setup() -> (
 fn test_request_inscription_stored_and_retrieved() {
     let (vault_dispatcher, contract_address, token_dispatcher, _scar) = setup();
 
-    token_dispatcher.approve(contract_address, 100);
+    // Initial balance should be 0
+    let initial_balance = vault_dispatcher.user_balance_of(test_address());
+    assert_eq!(initial_balance, 0);
 
-    let expected = 1_000_000_000_000_000_000; // initial balance
-    let actual = vault_dispatcher.user_balance_of(test_address());
-    assert_eq!(expected, actual);
+    // Approve and deposit tokens
+    token_dispatcher.approve(contract_address, 10000000000000000);
+    vault_dispatcher.deposit(10000000000000000);
 
-    let expected_contract_balance = 1000; // initial balance contract
-    let actual_contract_balance = token_dispatcher.balance_of(contract_address);
-    assert_eq!(expected_contract_balance, actual_contract_balance);
+    // After deposit, user should have shares equal to amount (since it's first deposit)
+    let balance_after_deposit = vault_dispatcher.user_balance_of(test_address());
+    assert_eq!(balance_after_deposit, 10000000000000000);
 
-    vault_dispatcher.deposit(100);
-
-    let expected_user_balance = constants::SUPPLY - 10; // the user balance after the request call
-    let actual_user_balance = token_dispatcher.balance_of(test_address());
-    assert_eq!(expected_user_balance, actual_user_balance);
+    // Check contract token balance
+    let contract_token_balance = token_dispatcher.balance_of(contract_address);
+    assert_eq!(contract_token_balance, 10000000000000000);
 }
